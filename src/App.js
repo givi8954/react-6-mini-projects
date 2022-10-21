@@ -1,79 +1,65 @@
 import React from 'react';
+import { Block } from './Block';
 import './index.scss';
 
-const questions = [
-  {
-    title: 'React - это ... ?',
-    variants: ['библиотека', 'фреймворк', 'приложение'],
-    correct: 0,
-  },
-  {
-    title: 'Компонент - это ... ',
-    variants: ['приложение', 'часть приложения или страницы', 'то, что я не знаю что такое'],
-    correct: 1,
-  },
-  {
-    title: 'Что такое JSX?',
-    variants: [
-      'Это простой HTML',
-      'Это функция',
-      'Это тот же HTML, но с возможностью выполнять JS-код',
-    ],
-    correct: 2,
-  },
-];
-
-function Result({correct}) {
-  return (
-    <div className="result">
-      <img src="https://cdn-icons-png.flaticon.com/512/2278/2278992.png" />
-      <h2>Вы отгадали {correct} ответа из {questions.length}</h2>
-      <a href='/'>
-      <button>Попробовать снова</button>
-      </a>
-    </div>
-  );
-}
-
-function Game({ step, question, onClickVariant}) {
-  const percentage = Math.round(step / questions.length * 100);
-
-  return (
-    <>
-      <div className="progress">
-        <div style={{ width: `${percentage}%` }} className="progress__inner"></div>
-      </div>
-      <h1>{question.title}</h1>
-      <ul>
-        {
-          question.variants.map((text, index) => (
-          <li onClick={() => onClickVariant(index)} key={text}>{text}</li>
-          ))}
-      </ul>
-    </>
-  );
-}
-
 function App() {
-  const [step, setStep] = React.useState(0);
-  const [correct, setCorrect] = React.useState(0);
-  const question = questions[step];
+  const [fromCurrency, setFromCurrency] = React.useState('UAH'); 
+  const [toCurrency, setToCurrency] = React.useState('USD'); 
+  const [fromPrice, setFromPrice] = React.useState(0); 
+  const [toPrice, setToPrice] = React.useState(1);
 
-  const onClickVariant = (index) => {
-      setStep(step + 1);
+  //const [rates, setRates] = React.useState({});
+  const ratesRef = React.useRef({});
 
-    if(index == question.correct){
-      setCorrect(correct + 1);
-    }
+  React.useEffect(() => {
+    fetch('https://cdn.cur.su/api/latest.json')
+    .then((res) => res.json())
+    .then((json) => {
+      //setRates(json.rates);
+      ratesRef.current = json.rates;
+      onChangeToPrice(1);
+    })
+    .catch((err) => {
+      console.warn(err);
+      alert('cant get information');
+    });
+
+  }, []);
+
+  const onChangeFromPrice = (value) => {
+    const price = value / ratesRef.current[fromCurrency];
+    const result = price * ratesRef.current[toCurrency];
+    setFromPrice(value);
+    setToPrice(result.toFixed(3));
   };
+
+  const onChangeToPrice = (value) => {
+    const result = (ratesRef.current[fromCurrency] / ratesRef.current[toCurrency]) * value;
+    setFromPrice(result.toFixed(3)); 
+    setToPrice(value);
+  };
+
+  React.useEffect(() => {
+    onChangeFromPrice(fromPrice);
+  },[fromCurrency]);
+
+  React.useEffect(() => {
+    onChangeToPrice(toPrice);
+  },[toCurrency]);
 
   return (
     <div className="App">
-      {
-        step !== questions.length ? (<Game step={step} question={question} onClickVariant={onClickVariant}/>
-        ) : (
-        <Result correct={correct} />
-        )}
+      <Block 
+      value={fromPrice}
+      currency={fromCurrency}
+      onChangeCurrency={setFromCurrency}
+      onChangeValue={onChangeFromPrice} 
+      />
+      <Block 
+      value={toPrice}
+      currency={toCurrency}
+      onChangeCurrency={setToCurrency}
+      onChangeValue={onChangeToPrice}  />
     </div>
   );
 }
