@@ -1,79 +1,83 @@
 import React from 'react';
+import { Collection } from './Collection';
 import './index.scss';
 
-const questions = [
-  {
-    title: 'React - это ... ?',
-    variants: ['библиотека', 'фреймворк', 'приложение'],
-    correct: 0,
-  },
-  {
-    title: 'Компонент - это ... ',
-    variants: ['приложение', 'часть приложения или страницы', 'то, что я не знаю что такое'],
-    correct: 1,
-  },
-  {
-    title: 'Что такое JSX?',
-    variants: [
-      'Это простой HTML',
-      'Это функция',
-      'Это тот же HTML, но с возможностью выполнять JS-код',
-    ],
-    correct: 2,
-  },
-];
-
-function Result({correct}) {
-  return (
-    <div className="result">
-      <img src="https://cdn-icons-png.flaticon.com/512/2278/2278992.png" />
-      <h2>Вы отгадали {correct} ответа из {questions.length}</h2>
-      <a href='/'>
-      <button>Попробовать снова</button>
-      </a>
-    </div>
-  );
-}
-
-function Game({ step, question, onClickVariant}) {
-  const percentage = Math.round(step / questions.length * 100);
-
-  return (
-    <>
-      <div className="progress">
-        <div style={{ width: `${percentage}%` }} className="progress__inner"></div>
-      </div>
-      <h1>{question.title}</h1>
-      <ul>
-        {
-          question.variants.map((text, index) => (
-          <li onClick={() => onClickVariant(index)} key={text}>{text}</li>
-          ))}
-      </ul>
-    </>
-  );
-}
+const cats = [
+    { "name": "Все" },
+    { "name": "Море" },
+    { "name": "Горы" },
+    { "name": "Архитектура" },
+    { "name": "Города" }
+  
+]
 
 function App() {
-  const [step, setStep] = React.useState(0);
-  const [correct, setCorrect] = React.useState(0);
-  const question = questions[step];
+  const [categoryId, setCategoryId] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [searchValue, setSearchValue] = React.useState('');
+  const [collections, setCollections] = React.useState([]);
 
-  const onClickVariant = (index) => {
-      setStep(step + 1);
+  React.useEffect(() => {
+    setIsLoading(true);
 
-    if(index == question.correct){
-      setCorrect(correct + 1);
-    }
-  };
+    const category = categoryId ? `category=${categoryId}` : '';
+
+    fetch(`https://6336ee6f65d1e8ef26765ea6.mockapi.io/PhotosAnotherProject?page=${page}&limit=3&${category}`,)
+    .then(res => res.json())
+    .then(json => {
+      setCollections(json);
+    })
+    .catch(err => {
+      console.warn(err);
+      alert('Error')
+    })
+    .finally(() => setIsLoading(false));
+
+  }, [categoryId, page]);
 
   return (
     <div className="App">
-      {
-        step !== questions.length ? (<Game step={step} question={question} onClickVariant={onClickVariant}/>
-        ) : (
-        <Result correct={correct} />
-        )}
+      <h1>Моя коллекция фотографий</h1>
+      <div className="top">
+        <ul className="tags">
+            {
+              cats.map((obj, i) => (
+              <li onClick={() => setCategoryId(i)} className={categoryId == i ? 'active' : ''} key={obj.name}>
+                {obj.name}
+                </li>
+              ))}
+        </ul>
+        <input 
+        value={searchValue}
+        onChange={e => setSearchValue(e.target.value)}
+        className="search-input" 
+        placeholder="Поиск по названию" />
+      </div>
+      <div className="content">
+          {
+            isLoading ? (<h2>Loading...</h2>
+            ) : (
+              collections.filter((obj) => obj.name.toLowerCase().includes(searchValue.toLowerCase()))
+              .map((obj, index) => (
+                <Collection
+                key={index}
+                name={obj.name}
+                images={obj.photos}
+                />
+              ))
+            )}
+      </div>
+      <ul className="pagination">
+        {
+          [...Array(5)].map((_, i) => (
+          <li
+          onClick={() => setPage(i + 1)}
+          className={page === i + 1 ? 'active' : ''}>
+            {i + 1}
+          </li>
+          ))}
+      </ul>
     </div>
   );
 }
